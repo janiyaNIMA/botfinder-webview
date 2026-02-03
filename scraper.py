@@ -53,23 +53,44 @@ class GitHubBotScraper:
 
     def get_gemini_summary(self, readme: str, description: str) -> Dict[str, str]:
         if not self.model:
-            return {"what_it_does": description, "how_to_use": "API Key missing."}
+            return {"what_it_does": description, "how_to_use": "API Key missing.", "repo_type": "Unknown"}
+        
         prompt = (
-            "Summarize this GitHub repository in JSON format. "
-            "Fields: 'what_it_does', 'how_to_use', 'repo_type'. "
-            "'repo_type' must be 'Library/Module' or 'Application/Bot'.\n\n"
-            f"Description: {description}\n\nREADME:\n{readme[:10000]}"
+            "Analyze this GitHub repository and provide a summary in STRICT JSON format.\n"
+            "Required keys: 'what_it_does', 'how_to_use', 'repo_type'.\n"
+            "'repo_type' must be exactly either 'Library/Module' or 'Application/Bot'.\n"
+            "Keep the values concise but informative.\n\n"
+            f"Description: {description}\n\n"
+            f"README Snippet:\n{readme[:5000]}"
         )
+        
         try:
-            time.sleep(10.0) 
+            # Sleep to avoid rate limits
+            time.sleep(2.0) 
             response = self.model.generate_content(prompt)
-            raw_text = response.text
+            raw_text = response.text.strip()
+            
+            # Remove markdown code blocks if present
+            if raw_text.startswith("```"):
+                raw_text = re.sub(r'^```(?:json)?\n', '', raw_text)
+                raw_text = re.sub(r'\n```$', '', raw_text)
+            
+            # Attempt to find JSON object if there's surrounding text
             match = re.search(r'\{.*\}', raw_text, re.DOTALL)
             if match:
-                return json.loads(match.group(0))
+                json_str = match.group(0)
+                # Basic cleanup for common AI JSON mistakes
+                json_str = json_str.replace("'", '"') # risky but sometimes needed
+                return json.loads(json_str)
+                
         except Exception as e:
             print(f"    [!] Gemini AI Error: {e}")
-        return {"what_it_does": description, "how_to_use": "AI Summary failed", "repo_type": "Unknown"}
+            
+        return {
+            "what_it_does": description or "No description available", 
+            "how_to_use": "Refer to the GitHub repository for installation and usage instructions.", 
+            "repo_type": "Application/Bot"
+        }
 
     def search_telegram_bots(self, query: str = "telegram bot", per_page: int = 10) -> List[Dict[str, Any]]:
         url = f"{self.github_base_url}/search/repositories"
@@ -129,9 +150,12 @@ class GitHubBotScraper:
         except Exception as e:
             print(f"[!] Error saving to MongoDB: {e}")
 
-    def run(self):
+    def run(self, limit: int = None):
         print("=== Syncing Repository Data ===")
         bots = self.search_telegram_bots()
+        if limit:
+            bots = bots[:limit]
+        
         results = []
         for bot in bots:
             data = self.process_bot(bot)
@@ -143,5 +167,5 @@ class GitHubBotScraper:
             except:
                 pass
             self.save_to_mongodb(results)
-            time.sleep(5.0) 
+            time.sleep(1.0) 
         print("[OK] Sync Finished.")

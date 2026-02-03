@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# save data
+bots_data.csv
+setup.md
+
 # C extensions
 *.so
 
@@ -138,3 +142,5 @@ Thumbs.db
 
 # Logs
 *.log
+.gitignore
+bots_data.json

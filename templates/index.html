@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#020617">
+    <title>GitHub Telegram Bot Summary</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #020617;
+            --card-color: rgba(30, 41, 59, 0.7);
+            --text-color: #f8fafc;
+            --accent-color: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.3);
+            --secondary-text: #94a3b8;
+            --border-color: rgba(51, 65, 85, 0.5);
+            --glass-bg: rgba(15, 23, 42, 0.8);
+            --primary-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.15) 0%, transparent 35%),
+                radial-gradient(circle at 100% 100%, rgba(129, 140, 248, 0.15) 0%, transparent 35%);
+            background-attachment: fixed;
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeInDown 0.8s ease-out;
+            padding: 0 1rem;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            font-size: clamp(2.2rem, 8vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+            color: var(--secondary-text);
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        /* Filter Navigation Styles */
+        .filter-nav {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            padding: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .filter-nav {
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding-bottom: 1rem;
+                margin-bottom: 2rem;
+                mask-image: linear-gradient(to right, black 85%, transparent 100%);
+                -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+                scrollbar-width: none; /* Firefox */
+            }
+            .filter-nav::-webkit-scrollbar {
+                display: none; /* Chrome/Safari */
+            }
+            .filter-btn {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+        }
+
+        .filter-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            color: var(--secondary-text);
+            padding: 0.7rem 1.4rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .filter-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--text-color);
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: var(--primary-gradient);
+            color: #000;
+            border-color: transparent;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 0.5rem;
+        }
+
+        .card {
+            background: var(--card-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 1.5rem;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-color);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card.hidden {
+            display: none;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.25rem;
+            gap: 1rem;
+        }
+
+        .bot-name {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-color);
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .stars {
+            font-size: 0.85rem;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.4rem 0.75rem;
+            border-radius: 2rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            flex-shrink: 0;
+        }
+
+        .description {
+            font-size: 0.92rem;
+            color: var(--secondary-text);
+            margin-bottom: 1.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 4.5em;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            background-color: var(--border-color);
+            color: #fff;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .badge:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+
+        .badge-app { background-color: #059669; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2); }
+        .badge-library { background-color: #7c3aed; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2); }
+        .badge-lang { background-color: #1e40af; }
+        .badge-default { background-color: #475569; }
+
+        .info-grid {
+            margin-top: auto;
+            display: grid;
+            gap: 1rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent-color);
+            opacity: 0.9;
+        }
+
+        .info-value {
+            font-size: 0.88rem;
+            color: var(--text-color);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .btn-container {
+            margin-top: 1.75rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            border-radius: 0.85rem;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 700;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: #000;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(56, 189, 248, 0.5);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            grid-column: 1 / -1;
+            color: var(--secondary-text);
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 1.5rem 0.75rem;
+            }
+            .card {
+                padding: 1.5rem;
+                border-radius: 1.25rem;
+            }
+            .bot-name {
+                font-size: 1.25rem;
+            }
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            h1 {
+                font-size: 2.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Bot Directory</h1>
+        <p>A curated collection of the most powerful and trending GitHub Telegram bot repositories, summarized by AI.</p>
+    </header>
+
+    <nav class="filter-nav">
+        <button class="filter-btn active" data-filter="all">All Repositories</button>
+        <button class="filter-btn" data-filter="Application/Bot">Applications & Bots</button>
+        <button class="filter-btn" data-filter="Library/Module">Libraries & Modules</button>
+    </nav>
+
+    <div class="container" id="bot-grid">
+        {% for bot in bots %}
+        <div class="card" data-type="{{ bot.repo_type }}">
+            <div class="card-header">
+                <div class="bot-name">{{ bot.name }}</div>
+                <div class="stars">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                    </svg>
+                    {{ bot.stars|default(0) }}
+                </div>
+            </div>
+            
+            <div class="description">{{ bot.description|default('No description provided.') }}</div>
+            
+            <div class="tags">
+                {% if bot.repo_type %}
+                    {% set type_class = 'badge-app' if bot.repo_type == 'Application/Bot' else 'badge-library' %}
+                    <span class="badge {{ type_class }}">{{ bot.repo_type }}</span>
+                {% endif %}
+                
+                {% if bot.language %}
+                    <span class="badge badge-lang">{{ bot.language }}</span>
+                {% endif %}
+                
+                {% if bot.license and bot.license != 'None' %}
+                    <span class="badge badge-default">{{ bot.license }}</span>
+                {% endif %}
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Main Function</span>
+                    <p class="info-value">{{ bot.what_it_does|default('Analyzing repository...') }}</p>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Usage Guide</span>
+                    <p class="info-value">{{ bot.how_to_use|default('Deployment steps coming soon.') }}</p>
+                </div>
+            </div>
+
+            <div class="btn-container">
+                <a href="{{ bot.link }}" target="_blank" class="btn btn-primary">
+                    Explore Repository
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>No bots found</h2>
+            <p>Ensure your data source is correctly populated.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const cards = document.querySelectorAll('.card');
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const filterValue = btn.getAttribute('data-filter');
+
+                    cards.forEach(card => {
+                        const cardType = card.getAttribute('data-type');
+                        
+                        if (filterValue === 'all' || cardType === filterValue) {
+                            card.classList.remove('hidden');
+                            setTimeout(() => {
+                                card.style.display = 'flex';
+                            }, 10);
+                        } else {
+                            card.classList.add('hidden');
+                            setTimeout(() => {
+                                card.style.display = 'none';
+                            }, 300);
+                        }
+                    });
+                });
+            });
+
+            // Smooth horizontal scroll for mobile filters
+            const filterNav = document.querySelector('.filter-nav');
+            if (filterNav) {
+                filterNav.addEventListener('wheel', (evt) => {
+                    if (window.innerWidth <= 600) {
+                        evt.preventDefault();
+                        filterNav.scrollLeft += evt.deltaY;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
